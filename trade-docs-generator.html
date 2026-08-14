@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>外贸单证自动生成系统</title>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --surface2: #0f3460;
+  --primary: #e94560;
+  --accent: #00d2ff;
+  --text: #eaeaea;
+  --text2: #a0a0b0;
+  --border: #2a2a4a;
+  --input-bg: #1e1e36;
+  --table-hd: #0f3460;
+  --success: #00c853;
+  --warning: #ff9100;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* === 顶部栏 === */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.topbar h1 { font-size: 18px; color: var(--accent); }
+.topbar .subtitle { font-size: 12px; color: var(--text2); margin-left: 8px; }
+.topbar .actions { display: flex; gap: 8px; }
+.btn {
+  padding: 7px 16px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface2); color: var(--text); cursor: pointer;
+  font-size: 13px; transition: all .2s; white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn-primary:hover { background: #c0392b; border-color: #c0392b; color: #fff; }
+.btn-accent { background: transparent; border-color: var(--accent); color: var(--accent); }
+.btn-accent:hover { background: var(--accent); color: #000; }
+.btn-success { background: var(--success); border-color: var(--success); color: #000; }
+.btn-success:hover { opacity: 0.85; color: #000; }
+
+/* === 主布局 === */
+.main-layout {
+  display: flex; height: calc(100vh - 56px);
+}
+.left-panel {
+  width: 480px; min-width: 380px; background: var(--surface);
+  border-right: 1px solid var(--border); overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.right-panel {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* === 左侧表单 === */
+.form-scroll { padding: 12px; flex: 1; overflow-y: auto; }
+.collapse-section { margin-bottom: 6px; }
+.collapse-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; background: var(--surface2); border-radius: 6px;
+  cursor: pointer; font-size: 13px; font-weight: 600;
+  transition: background .2s;
+}
+.collapse-header:hover { background: #1a4a80; }
+.collapse-header .arrow { transition: transform .2s; font-size: 10px; }
+.collapse-header.open .arrow { transform: rotate(90deg); }
+.collapse-body { padding: 10px 4px; display: none; }
+.collapse-body.show { display: block; }
+.form-row {
+  display: flex; gap: 8px; margin-bottom: 8px; align-items: center;
+}
+.form-row.col2 > * { width: 50%; }
+.form-row.col3 > * { width: 33.33%; }
+.form-group { flex: 1; }
+.form-group label {
+  display: block; font-size: 11px; color: var(--text2); margin-bottom: 3px;
+  font-weight: 500;
+}
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: 7px 10px; background: var(--input-bg);
+  border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text); font-size: 12px; outline: none; transition: border .2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color: var(--accent);
+}
+.form-group textarea { resize: vertical; min-height: 48px; font-family: inherit; }
+
+/* 货物明细表格 */
+.items-table-wrap { overflow-x: auto; margin: 8px 0; }
+.items-table {
+  width: 100%; border-collapse: collapse; font-size: 11px;
+  min-width: 750px;
+}
+.items-table th {
+  background: var(--table-hd); padding: 6px 4px; border: 1px solid var(--border);
+  color: var(--accent); font-size: 10px; position: sticky; top: 0;
+}
+.items-table td { padding: 2px; border: 1px solid var(--border); }
+.items-table input {
+  width: 100%; padding: 4px 5px; background: var(--input-bg);
+  border: none; color: var(--text); font-size: 11px; outline: none;
+  min-width: 50px;
+}
+.items-table input:focus { background: #2a2a50; }
+.items-table .w40 { min-width: 40px; width: 40px; }
+.items-table .w60 { min-width: 60px; width: 60px; }
+.items-table .w80 { min-width: 80px; width: 80px; }
+.items-table .w100 { min-width: 100px; width: 100px; }
+.items-table .w120 { min-width: 120px; }
+.item-row-remove {
+  background: none; border: none; color: var(--primary); cursor: pointer;
+  font-size: 16px; padding: 2px 6px;
+}
+.item-row-remove:hover { color: #ff5252; }
+
+/* === 右侧预览 === */
+.preview-tabs {
+  display: flex; background: var(--surface); border-bottom: 1px solid var(--border);
+  overflow-x: auto; flex-shrink: 0;
+}
+.preview-tab {
+  padding: 10px 16px; font-size: 12px; white-space: nowrap; cursor: pointer;
+  border: none; background: none; color: var(--text2);
+  border-bottom: 2px solid transparent; transition: all .2s;
+}
+.preview-tab:hover { color: var(--text); }
+.preview-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.preview-content {
+  flex: 1; overflow-y: auto; padding: 20px; background: #f5f5f5;
+  display: flex; justify-content: center;
+}
+.preview-frame {
+  width: 210mm; min-height: 297mm; background: #fff; box-shadow: 0 2px 20px rgba(0,0,0,.15);
+  position: relative;
+}
+.preview-frame iframe {
+  width: 100%; height: 100%; border: none; min-height: 297mm;
+}
+.preview-actions {
+  display: flex; gap: 8px; padding: 10px 20px; background: var(--surface);
+  border-top: 1px solid var(--border); flex-shrink: 0;
+}
+
+/* Toast */
+.toast {
+  position: fixed; top: 20px; right: 20px; z-index: 9999;
+  padding: 12px 20px; border-radius: 6px; font-size: 13px;
+  animation: slideIn .3s ease;
+  max-width: 360px;
+}
+.toast.success { background: #1b5e20; color: #a5d6a7; border: 1px solid #2e7d32; }
+.toast.error { background: #b71c1c; color: #ef9a9a; border: 1px solid #c62828; }
+.toast.info { background: #0d47a1; color: #90caf9; border: 1px solid #1565c0; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* 打印样式 */
+@media print {
+  body { background: #fff; }
+  .topbar, .left-panel, .preview-tabs, .preview-actions { display: none !important; }
+  .main-layout { display: block; height: auto; }
+  .right-panel { overflow: visible; }
+  .preview-content { padding: 0; }
+  .preview-frame { box-shadow: none; width: 100%; }
+}
+
+/* 响应式 */
+@media (max-width: 900px) {
+  .main-layout { flex-direction: column; }
+  .left-panel { width: 100%; min-width: 0; max-height: 40vh; }
+  .preview-frame { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- 顶部栏 -->
+<div class="topbar">
+  <div>
+    <h1 style="display:inline;">📦 外贸单证自动生成系统</h1>
+    <span class="subtitle">Trade Document Generator v1.0</span>
+  </div>
+  <div class="actions">
+    <button class="btn" onclick="loadSampleData()">📋 加载示例数据</button>
+    <button class="btn" onclick="clearAllData()">🗑 清空数据</button>
+    <button class="btn btn-accent" onclick="exportAllPDF()">📥 导出全部 PDF</button>
+  </div>
+</div>
+
+<!-- 主布局 -->
+<div class="main-layout">
+
+  <!-- 左侧表单 -->
+  <div class="left-panel">
+    <div class="form-scroll" id="formContainer">
+      <!-- 动态生成 -->
+    </div>
+  </div>
+
+  <!-- 右侧预览 -->
+  <div class="right-panel">
+    <div class="preview-tabs" id="previewTabs">
+      <!-- 动态生成 -->
+    </div>
+    <div class="preview-content" id="previewContent">
+      <div class="preview-frame" id="previewFrame">
+        <iframe id="previewIframe"></iframe>
+      </div>
+    </div>
+    <div class="preview-actions">
+      <span style="font-size:12px;color:var(--text2);margin-right:auto;line-height:32px;">💡 提示：表单数据自动保存，修改后实时预览</span>
+      <button class="btn" onclick="printCurrentDoc()">🖨 打印当前文档</button>
+      <button class="btn btn-success" onclick="downloadCurrentPDF()">📄 下载为 PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== 工具函数 ====================
+function fmtMoney(num, currency, symbol) {
+  const s = symbol || currency || '';
+  const n = Number(num);
+  if (isNaN(n)) return '';
+  return s + ' ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return d;
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+function sum(arr, key) { return arr.reduce((acc, it) => acc + (Number(it[key]) || 0), 0); }
+function numberToChinese(num) {
+  const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
+  const units = ['', '拾', '佰', '仟', '万', '拾', '佰', '仟', '亿'];
+  let n = Math.round(num * 100);
+  if (n === 0) return '零元整';
+  const yuan = Math.floor(n / 100);
+  const jiao = Math.floor((n % 100) / 10);
+  const fen = n % 10;
+  let result = '';
+  if (yuan > 0) {
+    let s = String(yuan);
+    let zero = false;
+    for (let i = 0; i < s.length; i++) {
+      const d = parseInt(s[i]);
+      const pos = s.length - i - 1;
+      if (d === 0) { zero = true; }
+      else {
+        if (zero) { result += '零'; zero = false; }
+        result += digits[d] + units[pos % units.length];
+      }
+    }
+    result += '元';
+  }
+  if (jiao === 0 && fen === 0) { result += '整'; }
+  else {
+    if (jiao > 0) result += digits[jiao] + '角';
+    else result += '零';
+    if (fen > 0) result += digits[fen] + '分';
+  }
+  return result;
+}
+
+// ==================== 数据管理 ====================
+const STORAGE_KEY = 'trade_docs_data';
+const DEFAULT_DATA = {
+  seller: { name: '', nameEn: '', address: '', addressEn: '', contact: '', phone: '', taxId: '', bankName: '', bankAccount: '', bankSwift: '' },
+  buyer: { name: '', nameEn: '', address: '', addressEn: '', contact: '', phone: '', taxId: '' },
+  order: { contractNo: '', invoiceNo: '', piNo: '', date: '', incoterms: 'FOB', paymentTerms: 'T/T 30% deposit, 70% against B/L copy', currency: 'USD', currencySymbol: '$', portOfLoading: '', portOfDischarge: '', vesselVoyage: '', etd: '', eta: '', transportMode: 'BY SEA', finalDestination: '', tradeCountry: '' },
+  items: [{ hsCode: '', description: '', descriptionEn: '', specs: '', qty: '', unit: 'PCS', unitPrice: '', totalPrice: '', netWeight: '', grossWeight: '', packages: '1', packageType: 'CTNS', volume: '' }],
+  declaration: { customsNo: '', originPlace: '', exemptionMethod: '照章征税', containerNo: '', containerType: '40HQ', containerQty: '1' },
+  insurance: { insuredParty: '', insuranceAmount: '', insuranceRate: '0.15', insurancePremium: '', coverageType: 'ALL RISKS (一切险) + WAR RISKS (战争险)' },
+  notes: { specialRequirements: '', productType: 'general', certifications: '' }
+};
+
+function getData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      return deepMerge(DEFAULT_DATA, saved);
+    }
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+
+function deepMerge(target, source) {
+  const result = JSON.parse(JSON.stringify(target));
+  for (const key in source) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      result[key] = deepMerge(result[key] || {}, source[key]);
+    } else {
+      result[key] = source[key];
+    }
+  }
+  return result;
+}
+
+function saveData() {
+  const data = collectFormData();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function collectFormData() {
+  const data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  // 简单收集：从表单中读取
+  const getVal = (id) => {
+    const el = document.getElementById(id);
+    return el ? el.value : '';
+  };
+
+  data.seller = {
+    name: getVal('seller_name'), nameEn: getVal('seller_nameEn'),
+    address: getVal('seller_address'), addressEn: getVal('seller_addressEn'),
+    contact: getVal('seller_contact'), phone: getVal('seller_phone'),
+    taxId: getVal('seller_taxId'), bankName: getVal('seller_bankName'),
+    bankAccount: getVal('seller_bankAccount'), bankSwift: getVal('seller_bankSwift')
+  };
+  data.buyer = {
+    name: getVal('buyer_name'), nameEn: getVal('buyer_nameEn'),
+    address: getVal('buyer_address'), addressEn: getVal('buyer_addressEn'),
+    contact: getVal('buyer_contact'), phone: getVal('buyer_phone'),
+    taxId: getVal('buyer_taxId')
+  };
+  data.order = {
+    contractNo: getVal('order_contractNo'), invoiceNo: getVal('order_invoiceNo'),
+    piNo: getVal('order_piNo'), date: getVal('order_date'),
+    incoterms: getVal('order_incoterms'), paymentTerms: getVal('order_paymentTerms'),
+    currency: getVal('order_currency'), currencySymbol: getVal('order_currencySymbol'),
+    portOfLoading: getVal('order_portOfLoading'), portOfDischarge: getVal('order_portOfDischarge'),
+    vesselVoyage: getVal('order_vesselVoyage'), etd: getVal('order_etd'),
+    eta: getVal('order_eta'), transportMode: getVal('order_transportMode'),
+    finalDestination: getVal('order_finalDestination'), tradeCountry: getVal('order_tradeCountry')
+  };
+
+  // 货物明细
+  const items = [];
+  const tbody = document.getElementById('itemsTableBody');
+  if (tbody) {
+    tbody.querySelectorAll('tr').forEach(row => {
+      const getCell = (n) => {
+        const input = row.querySelector(`td:nth-child(${n}) input`);
+        return input ? input.value : '';
+      };
+      items.push({
+        hsCode: getCell(1), description: getCell(2), descriptionEn: getCell(3),
+        specs: getCell(4), qty: getCell(5), unit: getCell(6),
+        unitPrice: getCell(7), totalPrice: getCell(8), netWeight: getCell(9),
+        grossWeight: getCell(10), packages: getCell(11), packageType: getCell(12),
+        volume: getCell(13)
+      });
+    });
+  }
+  if (items.length === 0) items.push(JSON.parse(JSON.stringify(DEFAULT_DATA.items[0])));
+  data.items = items;
+
+  data.declaration = {
+    customsNo: getVal('decl_customsNo'), originPlace: getVal('decl_originPlace'),
+    exemptionMethod: getVal('decl_exemptionMethod'), containerNo: getVal('decl_containerNo'),
+    containerType: getVal('decl_containerType'), containerQty: getVal('decl_containerQty')
+  };
+  data.insurance = {
+    insuredParty: getVal('ins_insuredParty'), insuranceAmount: getVal('ins_insuranceAmount'),
+    insuranceRate: getVal('ins_insuranceRate'), insurancePremium: getVal('ins_insurancePremium'),
+    coverageType: getVal('ins_coverageType')
+  };
+  data.notes = {
+    specialRequirements: getVal('notes_specialRequirements'),
+    productType: getVal('notes_productType'),
+    certifications: getVal('notes_certifications')
+  };
+  return data;
+}
+
+// ==================== 表单渲染 ====================
+function renderForm() {
+  const data = getData();
+  const s = data.seller, b = data.buyer, o = data.order, items = data.items,
+        d = data.declaration, ins = data.insurance, n = data.notes;
+
+  let html = '';
+
+  // --- 卖方信息 ---
+  html += `<div class="collapse-section">
+    <div class="collapse-header open" onclick="toggleCollapse(this)">
+      🏢 卖方信息 (Seller)
+      <span class="arrow">▶</span>
+    </div>
+    <div class="collapse-body show">
+      <div class="form-row col2">
+        <div class="form-group"><label>公司名称（中文）</label><input id="seller_name" value="${esc(s.name)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>Company Name (EN)</label><input id="seller_nameEn" value="${esc(s.nameEn)}" onchange="onFormChange()"></div>
+      </div>
+      <div class="form-row col2">
+        <div class="form-group"><label>地址（中文）</label><input id="seller_address" value="${esc(s.address)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>Address (EN)</label><input id="seller_addressEn" value="${esc(s.addressEn)}" onchange="onFormChange()"></div>
+      </div>
+      <div class="form-row col3">
+        <div class="form-group"><label>联系人</label><input id="seller_contact" value="${esc(s.contact)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>电话</label><input id="seller_phone" value="${esc(s.phone)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>统一社会信用代码</label><input id="seller_taxId" value="${esc(s.taxId)}" onchange="onFormChange()"></div>
+      </div>
+      <div class="form-row col3">
+        <div class="form-group"><label>开户银行</label><input id="seller_bankName" value="${esc(s.bankName)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>银行账号</label><input id="seller_bankAccount" value="${esc(s.bankAccount)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>SWIFT Code</label><input id="seller_bankSwift" value="${esc(s.bankSwift)}" onchange="onFormChange()"></div>
+      </div>
+    </div>
+  </div>`;
+
+  // --- 买方信息 ---
+  html += `<div class="collapse-section">
+    <div class="collapse-header" onclick="toggleCollapse(this)">
+      🌍 买方信息 (Buyer)
+      <span class="arrow">▶</span>
+    </div>
+    <div class="collapse-body">
+      <div class="form-row col2">
+        <div class="form-group"><label>公司名称（中文）</label><input id="buyer_name" value="${esc(b.name)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>Company Name (EN)</label><input id="buyer_nameEn" value="${esc(b.nameEn)}" onchange="onFormChange()"></div>
+      </div>
+      <div class="form-row col2">
+        <div class="form-group"><label>地址（中文）</label><input id="buyer_address" value="${esc(b.address)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>Address (EN)</label><input id="buyer_addressEn" value="${esc(b.addressEn)}" onchange="onFormChange()"></div>
+      </div>
+      <div class="form-row col3">
+        <div class="form-group"><label>联系人</label><input id="buyer_contact" value="${esc(b.contact)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>电话</label><input id="buyer_phone" value="${esc(b.phone)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>纳税人识别号</label><input id="buyer_taxId" value="${esc(b.taxId)}" onchange="onFormChange()"></div>
+      </div>
+    </div>
+  </div>`;
+
+  // --- 订单信息 ---
+  html += `<div class="collapse-section">
+    <div class="collapse-header open" onclick="toggleCollapse(this)">
+      📋 订单信息 (Order Info)
+      <span class="arrow">▶</span>
+    </div>
+    <div class="collapse-body show">
+      <div class="form-row col3">
+        <div class="form-group"><label>合同号 Contract No.</label><input id="order_contractNo" value="${esc(o.contractNo)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>发票号 Invoice No.</label><input id="order_invoiceNo" value="${esc(o.invoiceNo)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>PI 编号</label><input id="order_piNo" value="${esc(o.piNo)}" onchange="onFormChange()"></div>
+      </div>
+      <div class="form-row col3">
+        <div class="form-group"><label>日期 Date</label><input type="date" id="order_date" value="${esc(o.date)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>贸易术语 Incoterms</label>
+          <select id="order_incoterms" onchange="onFormChange()">
+            ${selOpts(['FOB','CIF','CFR','EXW','DDP','DAP','FCA','CIP'], o.incoterms)}
+          </select>
+        </div>
+        <div class="form-group"><label>付款方式 Payment</label><input id="order_paymentTerms" value="${esc(o.paymentTerms)}" onchange="onFormChange()"></div>
+      </div>
+      <div class="form-row col3">
+        <div class="form-group"><label>币种 Currency</label>
+          <select id="order_currency" onchange="onFormChange();updateCurrencySymbol()">
+            ${selOpts(['USD','EUR','GBP','CNY','JPY','AUD','CAD'], o.currency)}
+          </select>
+        </div>
+        <div class="form-group"><label>货币符号</label><input id="order_currencySymbol" value="${esc(o.currencySymbol)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>运输方式</label>
+          <select id="order_transportMode" onchange="onFormChange()">
+            ${selOpts(['BY SEA','BY AIR','BY TRUCK','BY RAIL','EXPRESS'], o.transportMode)}
+          </select>
+        </div>
+      </div>
+      <div class="form-row col3">
+        <div class="form-group"><label>起运港 Port of Loading</label><input id="order_portOfLoading" value="${esc(o.portOfLoading)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>目的港 Port of Discharge</label><input id="order_portOfDischarge" value="${esc(o.portOfDischarge)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>船名/航次 Vessel/Voyage</label><input id="order_vesselVoyage" value="${esc(o.vesselVoyage)}" onchange="onFormChange()"></div>
+      </div>
+      <div class="form-row col3">
+        <div class="form-group"><label>预计开船日 ETD</label><input type="date" id="order_etd" value="${esc(o.etd)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>预计到港日 ETA</label><input type="date" id="order_eta" value="${esc(o.eta)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>最终目的国 Trade Country</label><input id="order_tradeCountry" value="${esc(o.tradeCountry)}" onchange="onFormChange()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>最终目的地 Final Destination</label><input id="order_finalDestination" value="${esc(o.finalDestination)}" onchange="onFormChange()"></div>
+      </div>
+    </div>
+  </div>`;
+
+  // --- 货物明细 ---
+  html += `<div class="collapse-section">
+    <div class="collapse-header open" onclick="toggleCollapse(this)">
+      📦 货物明细 (Items)
+      <span class="arrow">▶</span>
+    </div>
+    <div class="collapse-body show">
+      <div class="items-table-wrap">
+        <table class="items-table">
+          <thead><tr>
+            <th class="w80">HS编码</th>
+            <th class="w100">品名(中)</th>
+            <th class="w100">品名(英)</th>
+            <th class="w100">规格型号</th>
+            <th class="w60">数量</th>
+            <th class="w40">单位</th>
+            <th class="w60">单价</th>
+            <th class="w60">总价</th>
+            <th class="w60">净重(KG)</th>
+            <th class="w60">毛重(KG)</th>
+            <th class="w40">件数</th>
+            <th class="w60">包装方式</th>
+            <th class="w60">体积(CBM)</th>
+            <th class="w40">操作</th>
+          </tr></thead>
+          <tbody id="itemsTableBody"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-accent" onclick="addItemRow()" style="margin-top:6px;">+ 添加货物行</button>
+    </div>
+  </div>`;
+
+  // --- 申报信息 ---
+  html += `<div class="collapse-section">
+    <div class="collapse-header" onclick="toggleCollapse(this)">
+      🛃 海关申报信息 (Customs Declaration)
+      <span class="arrow">▶</span>
+    </div>
+    <div class="collapse-body">
+      <div class="form-row col3">
+        <div class="form-group"><label>预录入编号</label><input id="decl_customsNo" value="${esc(d.customsNo)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>境内货源地</label><input id="decl_originPlace" value="${esc(d.originPlace)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>征免方式</label><input id="decl_exemptionMethod" value="${esc(d.exemptionMethod)}" onchange="onFormChange()"></div>
+      </div>
+      <div class="form-row col3">
+        <div class="form-group"><label>集装箱号</label><input id="decl_containerNo" value="${esc(d.containerNo)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>集装箱规格</label>
+          <select id="decl_containerType" onchange="onFormChange()">
+            ${selOpts(['20GP','40GP','40HQ','45HQ','LCL'], d.containerType)}
+          </select>
+        </div>
+        <div class="form-group"><label>集装箱数量</label><input id="decl_containerQty" value="${esc(d.containerQty)}" onchange="onFormChange()"></div>
+      </div>
+    </div>
+  </div>`;
+
+  // --- 保险信息 ---
+  html += `<div class="collapse-section">
+    <div class="collapse-header" onclick="toggleCollapse(this)">
+      🛡 物流保险信息 (Insurance)
+      <span class="arrow">▶</span>
+    </div>
+    <div class="collapse-body">
+      <div class="form-row col3">
+        <div class="form-group"><label>被保险人</label><input id="ins_insuredParty" value="${esc(ins.insuredParty)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>保险金额</label><input id="ins_insuranceAmount" value="${esc(ins.insuranceAmount)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>费率(%)</label><input id="ins_insuranceRate" value="${esc(ins.insuranceRate)}" onchange="onFormChange()"></div>
+      </div>
+      <div class="form-row col2">
+        <div class="form-group"><label>保费</label><input id="ins_insurancePremium" value="${esc(ins.insurancePremium)}" onchange="onFormChange()"></div>
+        <div class="form-group"><label>承保险别</label><input id="ins_coverageType" value="${esc(ins.coverageType)}" onchange="onFormChange()"></div>
+      </div>
+    </div>
+  </div>`;
+
+  // --- 备注信息 ---
+  html += `<div class="collapse-section">
+    <div class="collapse-header" onclick="toggleCollapse(this)">
+      📝 备注与特殊要求 (Notes)
+      <span class="arrow">▶</span>
+    </div>
+    <div class="collapse-body">
+      <div class="form-row col2">
+        <div class="form-group"><label>产品类型</label>
+          <select id="notes_productType" onchange="onFormChange()">
+            ${selOpts(['general','electronics','toys','textile','food','machinery','medical','chemical'], n.productType)}
+          </select>
+        </div>
+        <div class="form-group"><label>认证文件（逗号分隔）</label><input id="notes_certifications" value="${esc(n.certifications)}" onchange="onFormChange()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>特殊要求/注意事项（每行一条）</label>
+          <textarea id="notes_specialRequirements" onchange="onFormChange()" rows="3">${esc(n.specialRequirements)}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('formContainer').innerHTML = html;
+
+  // 渲染货物明细表
+  renderItemsTable(items);
+
+  // 恢复折叠状态
+  document.querySelectorAll('.collapse-header').forEach(h => {
+    const body = h.nextElementSibling;
+    if (h.classList.contains('open')) body.classList.add('show');
+  });
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function selOpts(options, selected) {
+  return options.map(o => `<option value="${o}" ${o===selected?'selected':''}>${o}</option>`).join('');
+}
+
+function renderItemsTable(items) {
+  const tbody = document.getElementById('itemsTableBody');
+  if (!tbody) return;
+  let html = '';
+  items.forEach((it, i) => {
+    html += `<tr>
+      <td><input value="${esc(it.hsCode)}" onchange="onFormChange()"></td>
+      <td><input value="${esc(it.description)}" onchange="onFormChange()"></td>
+      <td><input value="${esc(it.descriptionEn)}" onchange="onFormChange()"></td>
+      <td><input value="${esc(it.specs)}" onchange="onFormChange()"></td>
+      <td><input value="${esc(it.qty)}" onchange="onFormChange()" style="text-align:right"></td>
+      <td><input value="${esc(it.unit)}" onchange="onFormChange()"></td>
+      <td><input value="${esc(it.unitPrice)}" onchange="onFormChange()" style="text-align:right"></td>
+      <td><input value="${esc(it.totalPrice)}" onchange="onFormChange()" style="text-align:right"></td>
+      <td><input value="${esc(it.netWeight)}" onchange="onFormChange()" style="text-align:right"></td>
+      <td><input value="${esc(it.grossWeight)}" onchange="onFormChange()" style="text-align:right"></td>
+      <td><input value="${esc(it.packages)}" onchange="onFormChange()" style="text-align:right"></td>
+      <td><input value="${esc(it.packageType)}" onchange="onFormChange()"></td>
+      <td><input value="${esc(it.volume)}" onchange="onFormChange()" style="text-align:right"></td>
+      <td><button class="item-row-remove" onclick="removeItemRow(${i})" title="删除此行">✕</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+// ==================== 表单交互 ====================
+function toggleCollapse(header) {
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('show');
+}
+
+let formChangeTimer;
+function onFormChange() {
+  clearTimeout(formChangeTimer);
+  formChangeTimer = setTimeout(() => {
+    saveData();
+    refreshPreview();
+  }, 300);
+}
+
+function addItemRow() {
+  const data = getData();
+  data.items.push(JSON.parse(JSON.stringify(DEFAULT_DATA.items[0])));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  renderForm();
+  refreshPreview();
+}
+
+function removeItemRow(index) {
+  const data = getData();
+  if (data.items.length <= 1) {
+    showToast('至少保留一行货物明细', 'info');
+    return;
+  }
+  data.items.splice(index, 1);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  renderForm();
+  refreshPreview();
+}
+
+function updateCurrencySymbol() {
+  const el = document.getElementById('order_currency');
+  const symEl = document.getElementById('order_currencySymbol');
+  if (!el || !symEl) return;
+  const map = { USD: '$', EUR: '€', GBP: '£', CNY: '¥', JPY: '¥', AUD: 'A$', CAD: 'C$' };
+  symEl.value = map[el.value] || el.value;
+  onFormChange();
+}
+
+// ==================== 文档模板渲染 ====================
+const DOC_STYLE = `<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+.doc-page { max-width:210mm; margin:0 auto; padding:12mm 15mm; font-family:"SimSun","宋体",serif; font-size:12px; color:#000; background:#fff; }
+.doc-page .en { font-family:"Times New Roman",serif; }
+.doc-page h1 { text-align:center; font-size:18px; font-weight:bold; margin-bottom:2px; letter-spacing:2px; }
+.doc-page h1.en { font-size:16px; }
+.doc-page h2 { text-align:center; font-size:14px; font-weight:bold; margin:4px 0 8px; }
+.doc-page h3 { font-size:13px; font-weight:bold; margin:10px 0 6px; border-bottom:1px solid #333; padding-bottom:3px; }
+.doc-page hr { border:none; border-top:1px solid #333; margin:6px 0; }
+.doc-page .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px 20px; margin-bottom:10px; }
+.doc-page .info-grid.col3 { grid-template-columns:1fr 1fr 1fr; }
+.doc-page .info-row { display:flex; gap:4px; font-size:11px; line-height:1.7; }
+.doc-page .info-row .label { white-space:nowrap; min-width:70px; }
+.doc-page .info-row .val { border-bottom:1px dotted #999; flex:1; min-width:60px; }
+.doc-page table { width:100%; border-collapse:collapse; margin:8px 0; font-size:10.5px; }
+.doc-page table th { background:#e8e8e8; border:1px solid #333; padding:4px 3px; text-align:center; font-weight:bold; }
+.doc-page table td { border:1px solid #333; padding:3px 4px; text-align:center; }
+.doc-page table td.left { text-align:left; }
+.doc-page table td.right { text-align:right; }
+.doc-page .total-row { font-weight:bold; background:#f5f5f5; }
+.doc-page .footer-section { margin-top:12px; font-size:11px; }
+.doc-page .signature-box { display:flex; justify-content:space-between; margin-top:30px; }
+.doc-page .signature-box .sig { width:45%; }
+.doc-page .sig-line { border-bottom:1px solid #333; margin-top:40px; }
+.doc-page .clause { margin:6px 0; line-height:1.8; font-size:11px; }
+.doc-page .clause .num { font-weight:bold; min-width:30px; display:inline-block; }
+.doc-page .badge { display:inline-block; padding:2px 8px; border:1px solid #333; font-size:10px; margin-right:4px; }
+.doc-page .section-box { border:1px solid #333; padding:8px; margin-bottom:8px; }
+.doc-page .section-box .stitle { font-weight:bold; font-size:11px; margin-bottom:4px; border-bottom:1px dashed #999; padding-bottom:3px; }
+.doc-page .note-box { background:#fffde7; border:1px solid #f9a825; padding:8px 12px; margin:6px 0; font-size:11px; }
+.doc-page .note-box strong { color:#e65100; }
+@media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+</style>`;
+
+function renderPackingList(data) {
+  const s = data.seller, b = data.buyer, o = data.order, items = data.items;
+  let rows = '';
+  let totalPkgs = 0, totalNet = 0, totalGross = 0, totalVol = 0;
+  items.forEach((it, i) => {
+    const pkgs = Number(it.packages) || 1;
+    totalPkgs += pkgs;
+    totalNet += Number(it.netWeight) || 0;
+    totalGross += Number(it.grossWeight) || 0;
+    totalVol += Number(it.volume) || 0;
+    rows += `<tr><td>${i+1}</td><td class="left">${esc(it.description)}</td><td>${Number(it.qty)||''}</td><td>${Number(it.netWeight).toFixed(2)}</td><td>${Number(it.grossWeight).toFixed(2)}</td><td>${Number(it.volume).toFixed(3)}</td></tr>`;
+  });
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">${DOC_STYLE}</head><body><div class="doc-page">
+<h1>装 箱 单</h1><h2 class="en">PACKING LIST</h2><hr>
+<div class="info-grid">
+<div><div class="info-row"><span class="label">卖方 Seller：</span><span class="val">${esc(s.name)} / ${esc(s.nameEn)}</span></div><div class="info-row"><span class="label">地址 Add：</span><span class="val">${esc(s.address)}</span></div><div class="info-row"><span class="label">电话 Tel：</span><span class="val">${esc(s.phone)}</span></div></div>
+<div><div class="info-row"><span class="label">买方 Buyer：</span><span class="val">${esc(b.name)} / ${esc(b.nameEn)}</span></div><div class="info-row"><span class="label">地址 Add：</span><span class="val">${esc(b.address)}</span></div><div class="info-row"><span class="label">电话 Tel：</span><span class="val">${esc(b.phone)}</span></div></div>
+</div>
+<div class="info-grid">
+<div class="info-row"><span class="label">发票号 Inv No.：</span><span class="val">${esc(o.invoiceNo)}</span></div><div class="info-row"><span class="label">合同号 Cont No.：</span><span class="val">${esc(o.contractNo)}</span></div>
+<div class="info-row"><span class="label">日期 Date：</span><span class="val">${fmtDate(o.date)}</span></div><div class="info-row"><span class="label">贸易术语：</span><span class="val">${esc(o.incoterms)}</span></div>
+</div><hr>
+<table><thead><tr><th>箱号<br>Carton No.</th><th>品名<br>Description</th><th>数量<br>Qty</th><th>净重(KG)<br>Net Wt.</th><th>毛重(KG)<br>Gross Wt.</th><th>体积(CBM)<br>Volume</th></tr></thead>
+<tbody>${rows}</tbody>
+<tfoot><tr class="total-row"><td colspan="2">合计 TOTAL</td><td>${items.reduce((a,it)=>a+(Number(it.qty)||0),0)}</td><td>${totalNet.toFixed(2)}</td><td>${totalGross.toFixed(2)}</td><td>${totalVol.toFixed(3)}</td></tr></tfoot></table>
+<div class="info-grid"><div class="info-row"><span class="label">总件数：</span><span class="val">${totalPkgs} ${items[0]?.packageType||'件'}</span></div><div class="info-row"><span class="label">总净重：</span><span class="val">${totalNet.toFixed(2)} KGS</span></div><div class="info-row"><span class="label">总毛重：</span><span class="val">${totalGross.toFixed(2)} KGS</span></div><div class="info-row"><span class="label">总体积：</span><span class="val">${totalVol.toFixed(3)} CBM</span></div></div>
+</div></body></html>`;
+}
+
+function renderCustomsDeclaration(data) {
+  const s = data.seller, o = data.order, items = data.items, d = data.declaration || {};
+  let rows = '';
+  items.forEach((it,i) => {
+    rows += `<tr><td>${i+1}</td><td class="left">${esc(it.hsCode)}</td><td class="left">${esc(it.description)}</td><td class="left">${esc(it.specs)}</td><td>${Number(it.qty)||''}</td><td>${esc(it.unit)}</td><td class="right">${Number(it.unitPrice).toFixed(2)}</td><td class="right">${Number(it.totalPrice).toFixed(2)}</td><td>${esc(o.currency)}</td><td>${esc(d.exemptionMethod||'照章征税')}</td><td>${esc(o.finalDestination||o.tradeCountry)}</td></tr>`;
+  });
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">${DOC_STYLE}</head><body><div class="doc-page">
+<h1>中华人民共和国海关出口货物报关单</h1><h2>（预 录 单）</h2><hr>
+<div class="info-grid"><div class="info-row"><span class="label">预录入编号：</span><span class="val">${esc(d.customsNo)}</span></div><div class="info-row"><span class="label">海关编号：</span><span class="val">________________</span></div></div>
+<div class="info-grid"><div class="info-row"><span class="label">经营单位：</span><span class="val">${esc(s.name)}</span></div><div class="info-row"><span class="label">统一社会信用代码：</span><span class="val">${esc(s.taxId)}</span></div></div>
+<div class="info-grid"><div class="info-row"><span class="label">发货单位：</span><span class="val">${esc(s.name)}</span></div><div class="info-row"><span class="label">境内货源地：</span><span class="val">${esc(d.originPlace)}</span></div></div>
+<div class="info-grid"><div class="info-row"><span class="label">运输方式：</span><span class="val">${esc(o.transportMode)}</span></div><div class="info-row"><span class="label">运输工具名称：</span><span class="val">${esc(o.vesselVoyage)}</span></div><div class="info-row"><span class="label">提运单号：</span><span class="val">________________</span></div><div class="info-row"><span class="label">贸易方式：</span><span class="val">一般贸易</span></div></div>
+<div class="info-grid"><div class="info-row"><span class="label">运抵国（地区）：</span><span class="val">${esc(o.finalDestination||o.tradeCountry)}</span></div><div class="info-row"><span class="label">指运港：</span><span class="val">${esc(o.portOfDischarge)}</span></div><div class="info-row"><span class="label">成交方式：</span><span class="val">${esc(o.incoterms)}</span></div><div class="info-row"><span class="label">运费：</span><span class="val">________________</span></div></div><hr>
+<table><thead><tr><th>项号</th><th>HS编码</th><th>商品名称</th><th>规格型号</th><th>数量</th><th>单位</th><th>单价</th><th>总价</th><th>币制</th><th>征免</th><th>最终目的国</th></tr></thead>
+<tbody>${rows}</tbody></table>
+<div class="info-grid"><div class="info-row"><span class="label">集装箱号：</span><span class="val">${esc(d.containerNo)}</span></div><div class="info-row"><span class="label">集装箱规格：</span><span class="val">${esc(d.containerType)}</span></div><div class="info-row"><span class="label">集装箱数量：</span><span class="val">${esc(d.containerQty)}</span></div></div>
+<div class="footer-section"><div class="info-row"><span class="label">备注：</span><span class="val">本预录单仅供报关核对使用，以海关最终放行信息为准</span></div></div>
+</div></body></html>`;
+}
+
+function renderInputInvoice(data) {
+  const s = data.seller, b = data.buyer, items = data.items, o = data.order;
+  const taxRate = 0.13;
+  let rows = '', totalAmount = 0, totalTax = 0;
+  items.forEach((it) => {
+    const amount = Number(it.totalPrice) || 0;
+    const tax = amount * taxRate;
+    totalAmount += amount; totalTax += tax;
+    rows += `<tr><td class="left">${esc(it.description)}</td><td class="left">${esc(it.specs)}</td><td>${esc(it.unit)}</td><td>${Number(it.qty)||''}</td><td class="right">${Number(it.unitPrice).toFixed(2)}</td><td class="right">${amount.toFixed(2)}</td><td>13%</td><td class="right">${tax.toFixed(2)}</td></tr>`;
+  });
+  const grandTotal = totalAmount + totalTax;
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">${DOC_STYLE}</head><body><div class="doc-page">
+<h1>增值税专用发票</h1><h2>（进项发票草稿 · 仅供内部核对使用）</h2><hr>
+<div class="section-box"><div class="stitle">购买方信息 Buyer</div>
+<div class="info-row"><span class="label">名　　称：</span><span class="val">${esc(b.name)}</span></div>
+<div class="info-row"><span class="label">纳税人识别号：</span><span class="val">${esc(b.taxId)}</span></div>
+<div class="info-row"><span class="label">地址、电话：</span><span class="val">${esc(b.address)}  ${esc(b.phone)}</span></div>
+<div class="info-row"><span class="label">开户行及账号：</span><span class="val">____________________</span></div></div>
+<div class="section-box"><div class="stitle">销售方信息 Seller</div>
+<div class="info-row"><span class="label">名　　称：</span><span class="val">${esc(s.name)}</span></div>
+<div class="info-row"><span class="label">纳税人识别号：</span><span class="val">${esc(s.taxId)}</span></div>
+<div class="info-row"><span class="label">地址、电话：</span><span class="val">${esc(s.address)}  ${esc(s.phone)}</span></div>
+<div class="info-row"><span class="label">开户行及账号：</span><span class="val">${esc(s.bankName)}  ${esc(s.bankAccount)}</span></div></div>
+<table><thead><tr><th>货物或应税劳务名称</th><th>规格型号</th><th>单位</th><th>数量</th><th>单价</th><th>金额</th><th>税率</th><th>税额</th></tr></thead>
+<tbody>${rows}</tbody>
+<tfoot><tr class="total-row"><td colspan="5">合　　计</td><td class="right">${totalAmount.toFixed(2)}</td><td></td><td class="right">${totalTax.toFixed(2)}</td></tr></tfoot></table>
+<div class="section-box"><div class="stitle">价税合计（大写）</div><div style="font-size:14px;font-weight:bold;padding:6px;">${numberToChinese(grandTotal)}</div></div>
+<div class="info-grid"><div class="info-row"><span class="label">价税合计（小写）：</span><span class="val" style="font-weight:bold;font-size:14px;">¥ ${grandTotal.toFixed(2)}</span></div><div class="info-row"><span class="label">备　　注：</span><span class="val">合同号：${esc(o.contractNo)}  发票号：${esc(o.invoiceNo)}</span></div></div>
+<div class="note-box"><strong>提醒：</strong>此为进项发票草稿，请以实际开票信息为准。确保购买方和销售方信息、金额、税率与实际业务一致。</div>
+</div></body></html>`;
+}
+
+function renderLogisticsNotes(data) {
+  const s = data.seller, b = data.buyer, o = data.order, items = data.items, n = data.notes || {};
+  const prodType = n.productType || 'general';
+  const certMap = {
+    'electronics': ['CE (欧盟)', 'FCC (美国)', 'RoHS (环保)', 'REACH (化学品)', 'WEEE (电子废弃物)', 'UL (安全认证-美国)'],
+    'toys': ['CE (欧盟)', 'EN71 (玩具安全)', 'ASTM F963 (美国玩具安全)', 'CPSIA (美国消费品安全)'],
+    'textile': ['OEKO-TEX (纺织品环保)', 'REACH (化学品)', 'GOTS (有机纺织品-如适用)'],
+    'food': ['FDA (美国食品)', 'HACCP (食品安全)', 'ISO 22000 (食品安全管理)', '原产地证', '卫生证', '植检证/动检证'],
+    'machinery': ['CE (欧盟)', 'ISO 9001', '机械安全认证'],
+    'medical': ['CE (欧盟)', 'FDA (美国)', 'ISO 13485 (医疗器械)', '自由销售证书 FSC'],
+    'chemical': ['MSDS (化学品安全说明书)', 'REACH (欧盟)', '危险品运输鉴定报告'],
+    'general': ['CE (欧盟-如适用)', 'RoHS (环保-如适用)', 'ISO 9001 (质量管理)']
+  };
+  const certs = (n.certifications && n.certifications.trim()) ? n.certifications.split(/[,，]/).map(s=>s.trim()).filter(Boolean) : (certMap[prodType] || certMap['general']);
+  const marks = `MARKS:\n  ${b.nameEn || b.name || 'BUYER'}\n  C/NO. 1-UP\n  MADE IN CHINA\n  ${o.contractNo || ''}\n  ${o.portOfDischarge || ''}`;
+  const specReqs = n.specialRequirements ? n.specialRequirements.split('\n').filter(Boolean).map(l=>`<div>• ${esc(l)}</div>`).join('') : `<div>• 请确认目的国进口关税及是否有特殊清关要求</div><div>• 请提前确认是否需要办理原产地证（FORM E / FORM F 等）</div><div>• 请与货代确认船期、截关时间、截单时间</div><div>• 请确认客户是否有特殊单证要求（如使馆认证、商会认证等）</div>`;
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">${DOC_STYLE}</head><body><div class="doc-page">
+<h1>物流操作注意事项</h1><h2 class="en">LOGISTICS HANDLING NOTES</h2><hr>
+<div class="info-grid"><div class="info-row"><span class="label">合同号：</span><span class="val">${esc(o.contractNo)}</span></div><div class="info-row"><span class="label">制单日期：</span><span class="val">${fmtDate(new Date())}</span></div></div><hr>
+<h3>一、产品标签要求 / Label Requirements</h3>
+<div class="section-box"><div class="stitle">1.1 唛头（Shipping Marks）格式</div><pre style="background:#f5f5f5;padding:8px;border:1px solid #ccc;font-size:11px;">${esc(marks)}</pre></div>
+<div class="section-box"><div class="stitle">1.2 标签粘贴规范</div><ul style="margin:4px 0;padding-left:18px;font-size:11px;"><li>唛头标签贴在每件外包装的<b>相邻两面</b>（正面+侧面），确保叉车作业时可辨识</li><li>标签尺寸建议：<b>A5 (148×210mm)</b> 或以上，字体清晰，防水防潮</li><li>每件货物需贴有 <b>MADE IN CHINA</b> 原产地标识，字体高度不低于6mm</li><li>易碎品需加贴 <b>"FRAGILE / 易碎"</b> 和 <b>"THIS SIDE UP / 向上"</b> 标识</li><li>如有电子产品，需加贴 <b>CE / FCC</b> 等认证标识（如适用）</li><li>外箱需标注 <b>箱号、毛重、净重、尺寸</b> 信息</li></ul></div>
+<h3>二、产品认证文件清单 / Required Certifications</h3>
+<table><thead><tr><th>序号</th><th>认证文件名称</th><th>状态</th><th>备注</th></tr></thead><tbody>
+${certs.map((c,i)=>`<tr><td>${i+1}</td><td class="left">${esc(c)}</td><td>□ 已备 / □ 待办</td><td></td></tr>`).join('')}
+<tr><td>${certs.length+1}</td><td class="left">原产地证 Certificate of Origin</td><td>□ 已备 / □ 待办</td><td>FORM E / FORM F / CO</td></tr>
+<tr><td>${certs.length+2}</td><td class="left">装箱单 Packing List</td><td>□ 已备 / □ 待办</td><td></td></tr>
+<tr><td>${certs.length+3}</td><td class="left">商业发票 Commercial Invoice</td><td>□ 已备 / □ 待办</td><td></td></tr>
+<tr><td>${certs.length+4}</td><td class="left">海运/空运提单 B/L or AWB</td><td>□ 已备 / □ 待办</td><td>由货代提供</td></tr></tbody></table>
+<h3>三、包装规范 / Packing Specifications</h3>
+<ul style="margin:4px 0;padding-left:18px;font-size:11px;line-height:1.8;"><li>外包装采用<b>双层瓦楞纸箱</b>（出口标准），或按客户要求使用木箱/托盘</li><li>如需熏蒸木包装，需提供<b>熏蒸证书 (Fumigation Certificate)</b></li><li>纸箱封口使用<b>透明胶带+打包带</b>，打包带不少于2条（十字交叉）</li><li>箱内填充物充足，确保产品不晃动，建议使用<b>气泡膜/珍珠棉/泡沫</b></li><li>每箱重量建议不超过 <b>25KG</b>（如超重需标注"HEAVY"标识）</li><li>托盘需使用<b>免熏蒸托盘</b>（带IPPC标识），或提供熏蒸证书</li></ul>
+<h3>四、报关所需单证清单 / Customs Clearance Checklist</h3>
+<table><thead><tr><th>序号</th><th>单证名称</th><th>份数</th><th>备注</th></tr></thead><tbody><tr><td>1</td><td class="left">报关单</td><td>1</td><td>由报关行预录</td></tr><tr><td>2</td><td class="left">商业发票</td><td>2</td><td>加盖公章</td></tr><tr><td>3</td><td class="left">装箱单</td><td>2</td><td>加盖公章</td></tr><tr><td>4</td><td class="left">合同</td><td>1</td><td>加盖公章</td></tr><tr><td>5</td><td class="left">报关委托书</td><td>1</td><td>电子委托或纸质</td></tr><tr><td>6</td><td class="left">申报要素</td><td>1</td><td>按HS编码准备</td></tr></tbody></table>
+<h3>五、时间节点提醒 / Timeline Checklist</h3>
+<table><thead><tr><th>节点</th><th>事项</th><th>预计时间</th><th>状态</th></tr></thead><tbody>
+<tr><td>1</td><td class="left">确认订单及PI</td><td>${fmtDate(o.date)}</td><td>□</td></tr>
+<tr><td>2</td><td class="left">备货完成</td><td>${o.etd?'发运前7天':''}</td><td>□</td></tr>
+<tr><td>3</td><td class="left">订舱/订柜</td><td>${o.etd?'发运前10-14天':''}</td><td>□</td></tr>
+<tr><td>4</td><td class="left">报检/商检（如需）</td><td>发运前5-7天</td><td>□</td></tr>
+<tr><td>5</td><td class="left">报关</td><td>发运前2-3天</td><td>□</td></tr>
+<tr><td>6</td><td class="left">装船/发运</td><td>${fmtDate(o.etd)}</td><td>□</td></tr>
+<tr><td>7</td><td class="left">取得提单</td><td>发运后2-3天</td><td>□</td></tr>
+<tr><td>8</td><td class="left">寄送单证</td><td>发运后3-5天</td><td>□</td></tr>
+<tr><td>9</td><td class="left">预计到港</td><td>${fmtDate(o.eta)}</td><td>□</td></tr></tbody></table>
+<h3>六、特殊注意事项 / Special Notes</h3><div class="note-box">${specReqs}</div>
+<div class="signature-box" style="margin-top:20px;"><div class="sig"><div>制单人：________________</div><div style="margin-top:10px;">日期：${fmtDate(new Date())}</div></div><div class="sig"><div>审核人：________________</div><div style="margin-top:10px;">日期：________________</div></div></div>
+</div></body></html>`;
+}
+
+function renderSalesContract(data) {
+  const s = data.seller, b = data.buyer, o = data.order, items = data.items;
+  let itemsDesc = '';
+  items.forEach((it,i) => {
+    itemsDesc += `<tr><td>${i+1}</td><td class="left">${esc(it.description)}</td><td class="left">${esc(it.specs)}</td><td>${Number(it.qty)||''}</td><td>${esc(it.unit)}</td><td class="right">${Number(it.unitPrice).toFixed(2)}</td><td class="right">${Number(it.totalPrice).toFixed(2)}</td></tr>`;
+  });
+  const totalAmount = sum(items, 'totalPrice');
+  const totalQty = sum(items, 'qty');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">${DOC_STYLE}</head><body><div class="doc-page">
+<h1>销 售 合 同</h1><h2 class="en">SALES CONTRACT</h2><hr>
+<div class="info-grid"><div><div class="info-row"><span class="label">合同号 Contract No.：</span><span class="val">${esc(o.contractNo)}</span></div><div class="info-row"><span class="label">日期 Date：</span><span class="val">${fmtDate(o.date)}</span></div><div class="info-row"><span class="label">签约地 Signed at：</span><span class="val">CHINA</span></div></div></div>
+<div class="info-grid"><div class="section-box"><div class="stitle">卖方 The Seller</div><div>${esc(s.name)}</div><div>${esc(s.nameEn)}</div><div>${esc(s.address)}</div><div>TEL: ${esc(s.phone)}</div></div><div class="section-box"><div class="stitle">买方 The Buyer</div><div>${esc(b.name)}</div><div>${esc(b.nameEn)}</div><div>${esc(b.address)}</div><div>TEL: ${esc(b.phone)}</div></div></div><hr>
+<p class="clause">兹经买卖双方同意，按下列条款成交：<br><span class="en">This Contract is made by and between the Buyer and the Seller, whereby the Buyer agrees to buy and the Seller agrees to sell the undermentioned commodity according to the terms and conditions stipulated below:</span></p>
+<div class="clause"><span class="num">1.</span> <b>品名及规格 Commodity & Specifications</b></div>
+<table><thead><tr><th>序号</th><th>品名 Description</th><th>规格 Specs</th><th>数量 Qty</th><th>单位 Unit</th><th>单价 U/P</th><th>总价 Amount</th></tr></thead><tbody>${itemsDesc}</tbody></table>
+<div class="clause"><span class="num">2.</span> <b>数量 Quantity：</b>${totalQty} ${items[0]?.unit||''} (允许5%溢短装)</div>
+<div class="clause"><span class="num">3.</span> <b>单价 Unit Price：</b>按上述明细 / As per above</div>
+<div class="clause"><span class="num">4.</span> <b>总价 Total Amount：</b>${fmtMoney(totalAmount, o.currency, o.currencySymbol)} (${esc(o.incoterms)} ${esc(o.portOfLoading)})</div>
+<div class="clause"><span class="num">5.</span> <b>包装 Packing：</b>标准出口包装 / Standard Export Packing</div>
+<div class="clause"><span class="num">6.</span> <b>装运期 Time of Shipment：</b>${fmtDate(o.etd)} 或之前</div>
+<div class="clause"><span class="num">7.</span> <b>装运港/目的港：</b>从 ${esc(o.portOfLoading)} 至 ${esc(o.portOfDischarge)}</div>
+<div class="clause"><span class="num">8.</span> <b>付款条件 Terms of Payment：</b>${esc(o.paymentTerms)}</div>
+<div class="clause"><span class="num">9.</span> <b>保险 Insurance：</b>由买方/卖方负责</div>
+<div class="clause"><span class="num">10.</span> <b>单据要求 Documents Required：</b></div><div class="clause" style="padding-left:30px;">1) 签字的商业发票一式三份<br>2) 装箱单一式三份<br>3) 全套清洁已装船提单<br>4) 原产地证</div>
+<div class="clause"><span class="num">11.</span> <b>检验 Inspection：</b>由卖方出具检验报告</div>
+<div class="clause"><span class="num">12.</span> <b>不可抗力与仲裁：</b>按国际惯例，仲裁地点为中国</div><hr>
+<div class="signature-box"><div class="sig"><div><b>卖方 The Seller</b></div><div>${esc(s.name)}</div><div class="sig-line"></div><div>签字 Signature：________________</div><div>日期 Date：________________</div></div><div class="sig"><div><b>买方 The Buyer</b></div><div>${esc(b.name)}</div><div class="sig-line"></div><div>签字 Signature：________________</div><div>日期 Date：________________</div></div></div>
+</div></body></html>`;
+}
+
+function renderProformaInvoice(data) {
+  const s = data.seller, b = data.buyer, o = data.order, items = data.items;
+  let rows = '';
+  items.forEach((it,i) => {
+    rows += `<tr><td>${i+1}</td><td class="left">${esc(it.description)} / ${esc(it.descriptionEn)}</td><td>${Number(it.qty)||''}</td><td>${esc(it.unit)}</td><td class="right">${Number(it.unitPrice).toFixed(2)}</td><td class="right">${Number(it.totalPrice).toFixed(2)}</td></tr>`;
+  });
+  const totalAmount = sum(items, 'totalPrice');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">${DOC_STYLE}</head><body><div class="doc-page">
+<h1 class="en">PROFORMA INVOICE</h1><h2>形 式 发 票</h2><hr>
+<div class="info-grid"><div><div class="info-row"><span class="label">PI No.：</span><span class="val">${esc(o.piNo||o.invoiceNo)}</span></div><div class="info-row"><span class="label">Date：</span><span class="val">${fmtDate(o.date)}</span></div><div class="info-row"><span class="label">Contract No.：</span><span class="val">${esc(o.contractNo)}</span></div></div><div><div class="info-row"><span class="label">Terms：</span><span class="val">${esc(o.incoterms)}</span></div><div class="info-row"><span class="label">Payment：</span><span class="val">${esc(o.paymentTerms)}</span></div><div class="info-row"><span class="label">Currency：</span><span class="val">${esc(o.currency)}</span></div></div></div><hr>
+<div class="info-grid"><div class="section-box"><div class="stitle">Seller / 卖方</div><div>${esc(s.name)}</div><div>${esc(s.nameEn)}</div><div>${esc(s.address)}</div><div>TEL: ${esc(s.phone)}</div></div><div class="section-box"><div class="stitle">Buyer / 买方</div><div>${esc(b.name)}</div><div>${esc(b.nameEn)}</div><div>${esc(b.address)}</div><div>TEL: ${esc(b.phone)}</div></div></div>
+<table><thead><tr><th>序号<br>No.</th><th>品名 Description</th><th>数量<br>Qty</th><th>单位<br>Unit</th><th>单价<br>U/Price</th><th>总价<br>Amount</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="total-row"><td colspan="5">TOTAL ${esc(o.currency)}</td><td class="right">${totalAmount.toFixed(2)}</td></tr></tfoot></table>
+<div class="section-box"><div class="stitle">Total Amount in Words / 总金额大写</div><div style="font-weight:bold;font-size:13px;">SAY ${esc(o.currency)} <span class="en">________________ ONLY</span></div></div>
+<div class="section-box"><div class="stitle">Bank Information / 银行信息</div><div class="info-row"><span class="label">Beneficiary：</span><span class="val">${esc(s.nameEn||s.name)}</span></div><div class="info-row"><span class="label">Bank：</span><span class="val">${esc(s.bankName)}</span></div><div class="info-row"><span class="label">Account No.：</span><span class="val">${esc(s.bankAccount)}</span></div><div class="info-row"><span class="label">SWIFT Code：</span><span class="val">${esc(s.bankSwift)}</span></div></div>
+<div class="info-grid" style="margin-top:8px;"><div class="info-row"><span class="label">Port of Loading：</span><span class="val">${esc(o.portOfLoading)}</span></div><div class="info-row"><span class="label">Port of Discharge：</span><span class="val">${esc(o.portOfDischarge)}</span></div><div class="info-row"><span class="label">Est. Shipment Date：</span><span class="val">${fmtDate(o.etd)}</span></div><div class="info-row"><span class="label">Validity：</span><span class="val">${fmtDate(o.date)} 起 15 天内有效</span></div></div>
+<div class="footer-section" style="margin-top:15px;text-align:center;"><div>This Proforma Invoice is valid for 15 days from the date of issue.</div><div>本形式发票自签发之日起15天内有效。</div><div class="sig-line" style="width:200px;margin:30px auto 0;"></div><div>Authorized Signature / 授权签字</div></div>
+</div></body></html>`;
+}
+
+function renderInsuranceDraft(data) {
+  const s = data.seller, o = data.order, items = data.items, ins = data.insurance || {};
+  const totalInvoice = sum(items, 'totalPrice');
+  const insuranceAmount = ins.insuranceAmount || (totalInvoice * 1.1).toFixed(2);
+  const insuranceRate = ins.insuranceRate || '0.15';
+  const insurancePremium = ins.insurancePremium || ((Number(insuranceAmount) * Number(insuranceRate) / 100)).toFixed(2);
+  const desc = items.map(it => it.description || '').join('; ');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">${DOC_STYLE}</head><body><div class="doc-page">
+<h1>货物运输保险投保单</h1><h2 class="en">APPLICATION FOR CARGO TRANSPORTATION INSURANCE</h2><hr>
+<div class="section-box"><div class="stitle">被保险人 Insured</div><div class="info-row"><span class="val">${esc(ins.insuredParty||s.name)}</span></div></div>
+<div class="info-grid"><div class="info-row"><span class="label">发票号 Invoice No.：</span><span class="val">${esc(o.invoiceNo)}</span></div><div class="info-row"><span class="label">合同号 Contract No.：</span><span class="val">${esc(o.contractNo)}</span></div><div class="info-row"><span class="label">信用证号 L/C No.：</span><span class="val">________________</span></div><div class="info-row"><span class="label">发票金额：</span><span class="val">${fmtMoney(totalInvoice, o.currency, o.currencySymbol)}</span></div></div>
+<div class="section-box"><div class="stitle">货物描述 / Description of Goods</div><div style="padding:4px;">${esc(desc)}</div></div>
+<div class="info-grid"><div class="info-row"><span class="label">包装及数量：</span><span class="val">${items.reduce((a,it)=>a+(Number(it.packages)||0),0)} ${items[0]?.packageType||'件'} / ${sum(items,'qty')} ${items[0]?.unit||''}</span></div><div class="info-row"><span class="label">唛头 Marks：</span><span class="val">AS PER INVOICE NO. ${esc(o.invoiceNo)}</span></div></div><hr>
+<table><thead><tr><th>保险金额<br>Insured Amount</th><th>费率(%)\nRate</th><th>保费<br>Premium</th><th>承保险别<br>Coverage</th></tr></thead><tbody><tr><td>${fmtMoney(insuranceAmount, o.currency, o.currencySymbol)}</td><td>${esc(insuranceRate)}%</td><td>${fmtMoney(insurancePremium, o.currency, o.currencySymbol)}</td><td class="left">${esc(ins.coverageType||'ALL RISKS + WAR RISKS')}</td></tr></tbody></table>
+<div class="section-box"><div class="stitle">运输路线 / Transportation Route</div><div class="info-row"><span class="label">从 From：</span><span class="val">${esc(o.portOfLoading)}</span></div><div class="info-row"><span class="label">经 Via：</span><span class="val">________________</span></div><div class="info-row"><span class="label">到 To：</span><span class="val">${esc(o.portOfDischarge)}</span></div></div>
+<div class="info-grid"><div class="info-row"><span class="label">运输工具 Vessel：</span><span class="val">${esc(o.vesselVoyage)}</span></div><div class="info-row"><span class="label">开航日期 Sailing Date：</span><span class="val">${fmtDate(o.etd)}</span></div><div class="info-row"><span class="label">运输方式 Mode：</span><span class="val">${esc(o.transportMode)}</span></div><div class="info-row"><span class="label">赔款地点：</span><span class="val">${esc(o.portOfDischarge)}</span></div></div><hr>
+<div class="note-box"><strong>注意：</strong>本投保单为预录草稿，实际投保请以保险公司正式保单为准。请核对保险金额、费率、险别等信息是否准确。</div>
+<div class="signature-box" style="margin-top:20px;"><div class="sig"><div>投保人签字：________________</div><div style="margin-top:10px;">日期：${fmtDate(new Date())}</div></div></div>
+</div></body></html>`;
+}
+
+function renderOtherDocs(data) {
+  const s = data.seller, b = data.buyer, o = data.order, items = data.items, d = data.declaration || {};
+  const totalPkgs = sum(items, 'packages');
+  const totalGross = sum(items, 'grossWeight');
+  const totalVol = sum(items, 'volume');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">${DOC_STYLE}</head><body><div class="doc-page">
+<h1>物流配套单证</h1><h2 class="en">SUPPORTING LOGISTICS DOCUMENTS</h2><hr>
+<h3>一、唛头 / SHIPPING MARKS</h3>
+<div class="section-box"><pre style="background:#f5f5f5;padding:10px;font-size:12px;font-weight:bold;">${esc(b.nameEn||b.name||'BUYER')}
+C/NO. 1-${totalPkgs}
+MADE IN CHINA
+${esc(o.contractNo)}
+${esc(o.portOfDischarge)}</pre></div>
+<h3>二、委托报关单 / CUSTOMS BROKER ENTRUSTMENT</h3>
+<div class="section-box"><div class="stitle">报关委托基本信息</div>
+<div class="info-grid"><div class="info-row"><span class="label">委托方：</span><span class="val">${esc(s.name)}</span></div><div class="info-row"><span class="label">统一社会信用代码：</span><span class="val">${esc(s.taxId)}</span></div><div class="info-row"><span class="label">被委托方（报关行）：</span><span class="val">________________</span></div><div class="info-row"><span class="label">报关行海关编码：</span><span class="val">________________</span></div><div class="info-row"><span class="label">委托期限：</span><span class="val">${fmtDate(new Date())} 至 ${fmtDate(new Date(Date.now()+365*86400000))}</span></div><div class="info-row"><span class="label">委托方式：</span><span class="val">长期委托 / 逐票委托</span></div></div></div>
+<h3>三、集装箱装箱单 / CONTAINER LOAD PLAN</h3>
+<div class="section-box"><div class="stitle">装箱信息</div>
+<div class="info-grid"><div class="info-row"><span class="label">集装箱号：</span><span class="val">${esc(d.containerNo||'________________')}</span></div><div class="info-row"><span class="label">箱型/规格：</span><span class="val">${esc(d.containerType||'________________')}</span></div><div class="info-row"><span class="label">封号 Seal No.：</span><span class="val">________________</span></div><div class="info-row"><span class="label">铅封号：</span><span class="val">________________</span></div></div>
+<table style="margin-top:8px;"><thead><tr><th>箱号范围</th><th>品名</th><th>件数</th><th>毛重(KG)</th><th>体积(CBM)</th></tr></thead><tbody><tr><td>1 - ${totalPkgs}</td><td class="left">${items.map(i=>esc(i.description||'')).join('; ')}</td><td>${totalPkgs}</td><td>${totalGross.toFixed(2)}</td><td>${totalVol.toFixed(3)}</td></tr></tbody></table></div>
+<h3>四、发货通知单 / SHIPPING ADVICE</h3>
+<div class="section-box">
+<div class="info-grid"><div class="info-row"><span class="label">合同号：</span><span class="val">${esc(o.contractNo)}</span></div><div class="info-row"><span class="label">发票号：</span><span class="val">${esc(o.invoiceNo)}</span></div><div class="info-row"><span class="label">发运日期：</span><span class="val">${fmtDate(o.etd)}</span></div><div class="info-row"><span class="label">船名/航次：</span><span class="val">${esc(o.vesselVoyage)}</span></div><div class="info-row"><span class="label">起运港：</span><span class="val">${esc(o.portOfLoading)}</span></div><div class="info-row"><span class="label">目的港：</span><span class="val">${esc(o.portOfDischarge)}</span></div><div class="info-row"><span class="label">预计到港日：</span><span class="val">${fmtDate(o.eta)}</span></div><div class="info-row"><span class="label">提单号 B/L No.：</span><span class="val">________________</span></div></div>
+<div class="note-box" style="margin-top:8px;"><strong>提醒：</strong>发货后请及时将提单、发票、装箱单等单证发送给买方，并抄送相关方。</div></div><hr>
+<div class="footer-section" style="text-align:center;"><div>制单人：________________ &nbsp;&nbsp; 日期：${fmtDate(new Date())}</div></div>
+</div></body></html>`;
+}
+
+// ==================== 文档渲染器注册表 ====================
+const DOC_RENDERERS = {
+  'packing-list': { title: '📦 装箱单', fn: renderPackingList },
+  'customs-decl': { title: '🛃 报关预录单', fn: renderCustomsDeclaration },
+  'input-invoice': { title: '🧾 进项发票草稿', fn: renderInputInvoice },
+  'logistics-notes': { title: '📋 物流注意事项', fn: renderLogisticsNotes },
+  'sales-contract': { title: '📝 销售合同', fn: renderSalesContract },
+  'proforma-invoice': { title: '💰 形式发票', fn: renderProformaInvoice },
+  'insurance-draft': { title: '🛡 保险预录单', fn: renderInsuranceDraft },
+  'other-docs': { title: '📎 其他物流单证', fn: renderOtherDocs }
+};
+
+// ==================== 预览切换 ====================
+let currentDocKey = 'packing-list';
+
+function renderPreviewTabs() {
+  const tabsContainer = document.getElementById('previewTabs');
+  tabsContainer.innerHTML = Object.entries(DOC_RENDERERS).map(([key, info]) =>
+    `<button class="preview-tab ${key === currentDocKey ? 'active' : ''}" onclick="switchDoc('${key}')">${info.title}</button>`
+  ).join('');
+}
+
+function switchDoc(key) {
+  currentDocKey = key;
+  document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+  const tab = document.querySelector(`.preview-tab[onclick="switchDoc('${key}')"]`);
+  if (tab) tab.classList.add('active');
+  refreshPreview();
+}
+
+function refreshPreview() {
+  const data = getData();
+  const renderer = DOC_RENDERERS[currentDocKey];
+  if (!renderer) return;
+  const html = renderer.fn(data);
+  const iframe = document.getElementById('previewIframe');
+  iframe.srcdoc = html;
+}
+
+// ==================== 导出功能 ====================
+function printCurrentDoc() {
+  const iframe = document.getElementById('previewIframe');
+  iframe.contentWindow.print();
+}
+
+function downloadCurrentPDF() {
+  showToast('请点击「🖨 打印当前文档」，在打印对话框中选择「另存为 PDF」即可下载', 'info');
+  setTimeout(() => printCurrentDoc(), 500);
+}
+
+async function exportAllPDF() {
+  showToast('正在准备导出全部文档，请在弹出的打印对话框中逐份保存为 PDF...', 'info');
+  const keys = Object.keys(DOC_RENDERERS);
+  const data = getData();
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const renderer = DOC_RENDERERS[key];
+    const html = renderer.fn(data);
+    const iframe = document.getElementById('previewIframe');
+    iframe.srcdoc = html;
+
+    await new Promise(resolve => {
+      setTimeout(() => {
+        iframe.contentWindow.print();
+        setTimeout(resolve, 800);
+      }, 300);
+    });
+
+    if (i < keys.length - 1) {
+      showToast(`已发送第 ${i+1}/${keys.length} 份文档（${renderer.title}）到打印机，请在打印对话框中选择「另存为 PDF」`, 'info');
+    }
+  }
+  showToast(`全部 ${keys.length} 份文档已发送打印！每份请手动另存为 PDF`, 'success');
+}
+
+// ==================== Toast ====================
+function showToast(msg, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+
+// ==================== 示例数据 ====================
+function loadSampleData() {
+  const sample = {
+    seller: { name: '深圳创达进出口有限公司', nameEn: 'Shenzhen Chuangda Import & Export Co., Ltd.', address: '广东省深圳市宝安区福永街道XX路88号', addressEn: 'No.88 XX Road, Fuyong, Bao\'an, Shenzhen, Guangdong, China', contact: '张三', phone: '+86-755-12345678', taxId: '91440300MA5XXXXXXX', bankName: '中国银行深圳分行', bankAccount: '6217XXXXXXXXXXXXX', bankSwift: 'BKCHCNBJ' },
+    buyer: { name: 'ABC Trading LLC', nameEn: 'ABC Trading LLC', address: '123 Main Street, New York, NY 10001, USA', addressEn: '123 Main Street, New York, NY 10001, USA', contact: 'John Smith', phone: '+1-212-555-0199', taxId: '' },
+    order: { contractNo: 'CD2024-0725', invoiceNo: 'CD2024-0725-INV', piNo: 'CD2024-0725-PI', date: '2024-07-25', incoterms: 'FOB', paymentTerms: 'T/T 30% deposit, 70% against B/L copy', currency: 'USD', currencySymbol: '$', portOfLoading: 'SHENZHEN, CHINA', portOfDischarge: 'NEW YORK, USA', vesselVoyage: 'EVER GIVEN / 025W', etd: '2024-08-15', eta: '2024-09-20', transportMode: 'BY SEA', finalDestination: 'NEW YORK, USA', tradeCountry: '美国' },
+    items: [
+      { hsCode: '9503008900', description: '塑料玩具车（12只装）', descriptionEn: 'Plastic Toy Cars (12pcs/set)', specs: '15×8×5cm / 12pcs per display box', qty: '2000', unit: 'SETS', unitPrice: '5.50', totalPrice: '11000.00', netWeight: '0.35', grossWeight: '0.50', packages: '100', packageType: 'CTNS', volume: '0.025' },
+      { hsCode: '9503008900', description: '塑料玩具恐龙（8只装）', descriptionEn: 'Plastic Toy Dinosaurs (8pcs/set)', specs: '20×10×8cm / 8pcs per display box', qty: '1500', unit: 'SETS', unitPrice: '7.20', totalPrice: '10800.00', netWeight: '0.45', grossWeight: '0.65', packages: '125', packageType: 'CTNS', volume: '0.030' }
+    ],
+    declaration: { customsNo: '530420240025XXXXXX', originPlace: '深圳宝安', exemptionMethod: '照章征税', containerNo: 'TCLU1234567', containerType: '40HQ', containerQty: '1' },
+    insurance: { insuredParty: 'Shenzhen Chuangda Import & Export Co., Ltd.', insuranceAmount: '', insuranceRate: '0.15', insurancePremium: '', coverageType: 'ALL RISKS (一切险) + WAR RISKS (战争险)' },
+    notes: { specialRequirements: '客户要求外箱贴有亚马逊FBA标签\n请确保产品有CPC认证（儿童产品证书）\n发货后48小时内提供扫描件', productType: 'toys', certifications: '' }
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sample));
+  renderForm();
+  refreshPreview();
+  showToast('✅ 示例数据已加载！你可以在左侧修改信息，右侧实时预览', 'success');
+}
+
+function clearAllData() {
+  if (confirm('确定要清空所有已填写的数据吗？此操作不可恢复。')) {
+    localStorage.removeItem(STORAGE_KEY);
+    renderForm();
+    refreshPreview();
+    showToast('数据已清空', 'info');
+  }
+}
+
+// ==================== 初始化 ====================
+function init() {
+  renderForm();
+  renderPreviewTabs();
+  refreshPreview();
+
+  // 监听键盘快捷键
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'p') {
+        e.preventDefault();
+        printCurrentDoc();
+      }
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
